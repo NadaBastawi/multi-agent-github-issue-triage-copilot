@@ -213,6 +213,7 @@ test_*.py
 *_test.py
 *_test_*.py
 debug_*.py
+!agentforge/logging/debug_tracer.py
 temp_*.py
 
 # API keys and secrets

@@ -24,7 +24,16 @@ pip install agentforge
 git clone https://github.com/h9-tec/agentforge
 cd agentforge
 python -m venv venv
+
+# Activate virtualenv (macOS/Linux)
 source venv/bin/activate
+
+# Activate virtualenv (Windows PowerShell)
+# .\venv\Scripts\Activate.ps1
+
+# Activate virtualenv (Windows CMD)
+# venv\Scripts\activate.bat
+
 pip install -e .
 ```
 
