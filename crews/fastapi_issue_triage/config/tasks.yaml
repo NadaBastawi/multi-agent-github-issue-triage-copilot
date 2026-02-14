@@ -1,0 +1,61 @@
+main_task:
+  description: |
+    Parse the provided issue reference and collect full issue context for `tiangolo/fastapi`.
+    Required context fields:
+    - issue_number
+    - title
+    - body
+    - labels
+    - state
+    - created_at
+    - comment_count
+    - recent_comments (max 5)
+    - related_issues (max 5)
+
+    Return a single section named `ISSUE_CONTEXT_JSON` containing valid JSON only.
+  expected_output: Valid JSON issue context block named ISSUE_CONTEXT_JSON
+  agent: issue_intake_specialist
+
+triage_analysis_task:
+  description: |
+    Using ISSUE_CONTEXT_JSON, produce a strict triage decision:
+    - issue_type: bug | support | feature | docs
+    - severity: low | medium | high | critical
+    - component_guess: routing | dependencies | validation | docs | deployment | other
+    - missing_info: list of concrete questions
+    - confidence: float between 0.0 and 1.0
+    - action: human_review | ready_to_reply
+    - rationale: short evidence-based explanation
+
+    Return a single section named `TRIAGE_JSON` containing valid JSON only.
+  expected_output: Valid JSON triage block named TRIAGE_JSON
+  agent: triage_analyst_specialist
+  context:
+  - main_task
+
+maintainer_draft_task:
+  description: |
+    Using ISSUE_CONTEXT_JSON and TRIAGE_JSON, produce:
+    - `REPRO_CHECKLIST_MD`: markdown checklist for reporter
+    - `DRAFT_MAINTAINER_REPLY_MD`: concise maintainer reply
+
+    The reply must acknowledge the report, summarize triage decision, ask only missing info questions,
+    and state next step.
+  expected_output: Two markdown sections named REPRO_CHECKLIST_MD and DRAFT_MAINTAINER_REPLY_MD
+  agent: maintainer_response_specialist
+  context:
+  - triage_analysis_task
+
+quality_gate_task:
+  description: |
+    Validate all outputs against the schema. If confidence is below 0.65 or severity is critical,
+    enforce `action = human_review`.
+
+    Return a single section named `FINAL_OUTPUT_PACKAGE` with:
+    - TRIAGE_JSON
+    - REPRO_CHECKLIST_MD
+    - DRAFT_MAINTAINER_REPLY_MD
+  expected_output: Final validated output package
+  agent: quality_gate_specialist
+  context:
+  - maintainer_draft_task

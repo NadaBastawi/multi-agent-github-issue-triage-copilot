@@ -1,0 +1,29 @@
+[project]
+name = "fastapi_issue_triage"
+version = "1.0.0"
+description = "GitHub issue triage and maintainer reply copilot for tiangolo/fastapi"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "crewai",
+    "crewai-tools",
+    "pydantic",
+    "pyyaml",
+    "python-dotenv"
+]
+
+[project.scripts]
+fastapi_issue_triage = "src.fastapi_issue_triage.main:main"
+fastapi_issue_triage_batch = "src.fastapi_issue_triage.batch:main"
+fastapi_issue_triage_eval = "src.fastapi_issue_triage.eval:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0"
+]

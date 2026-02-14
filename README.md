@@ -492,3 +492,25 @@ AgentForge is released under the MIT License. See [LICENSE](LICENSE) for details
 **Built with ❤️ for the AI community**
 
 *AgentForge represents the future of multi-agent systems - intelligent, adaptive, and self-evolving.*
+
+## FastAPI Issue Triage Crew
+
+New production-ready crew: `crews/fastapi_issue_triage`
+
+- Target repository: `tiangolo/fastapi`
+- Purpose: human-in-the-loop issue triage + repro checklist + maintainer reply draft
+- Outputs: `triage.json`, `repro_checklist.md`, `draft_maintainer_reply.md`
+
+Quick run:
+
+```bash
+cd crews/fastapi_issue_triage
+uv venv
+uv sync
+uv run python -m src.fastapi_issue_triage.main "https://github.com/tiangolo/fastapi/issues/12176"
+```
+
+Detailed setup and ordered commands for any developer:
+
+- `crews/fastapi_issue_triage/README.md`
+- Environment template: `crews/fastapi_issue_triage/.env.example`
