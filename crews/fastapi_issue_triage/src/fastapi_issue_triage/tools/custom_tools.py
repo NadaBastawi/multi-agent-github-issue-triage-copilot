@@ -785,7 +785,7 @@ def extract_json_from_text(text_value: str, required_keys: Optional[List[str]] =
     """Extract first JSON object from markdown/plain text."""
     text_value = text_value or ""
 
-    fence_match = re.search(r"```json\s*(\{.*?\})\s*```", text_value, re.IGNORECASE | re.DOTALL)
+    fence_match = re.search(r"```json\s*(\{.*\})\s*```", text_value, re.IGNORECASE | re.DOTALL)
     candidates = []
     if fence_match:
         candidates.append(fence_match.group(1))

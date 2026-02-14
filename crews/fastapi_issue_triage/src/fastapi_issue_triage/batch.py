@@ -82,23 +82,36 @@ def main() -> int:
         print("No issue references provided. Use --issue or --issue-file.")
         return 1
 
-    crew = FastapiIssueTriageCrew()
     results = []
     success_count = 0
 
     for index, issue_ref in enumerate(issue_refs, start=1):
         print(f"[{index}/{len(issue_refs)}] Processing {issue_ref}...")
-        result_raw = crew.run(issue_ref)
         try:
-            result = json.loads(result_raw)
-        except json.JSONDecodeError:
-            result = {"status": "failed", "error": "non-json result", "raw": result_raw}
+            crew = FastapiIssueTriageCrew()
+            result_raw = crew.run(issue_ref)
+            try:
+                result = json.loads(result_raw)
+            except json.JSONDecodeError:
+                result = {
+                    "status": "failed",
+                    "issue_reference": issue_ref,
+                    "error": "non-json result",
+                    "raw": result_raw,
+                }
+        except Exception as exc:
+            result = {
+                "status": "failed",
+                "issue_reference": issue_ref,
+                "error": f"batch execution error: {exc}",
+            }
         results.append(result)
         if result.get("status") == "completed":
             success_count += 1
 
+    project_root = Path(__file__).resolve().parents[2]
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%SZ")
-    batch_output_dir = Path("outputs") / f"batch_{timestamp}"
+    batch_output_dir = project_root / "outputs" / f"batch_{timestamp}"
     batch_output_dir.mkdir(parents=True, exist_ok=True)
 
     summary = {

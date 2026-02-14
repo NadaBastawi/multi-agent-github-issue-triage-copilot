@@ -7,6 +7,7 @@ GitHub issue triage and maintainer reply copilot for tiangolo/fastapi.
 
 import os
 import sys
+import json
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -35,18 +36,32 @@ def main():
             print(f"[INFO] Using FASTAPI_ISSUE_REF={task_input}")
         else:
             print("[ERROR] Missing issue reference.")
-            print("Usage: python -m src.fastapi_issue_triage.main <issue_number_or_url>")
-            print("Example: python -m src.fastapi_issue_triage.main https://github.com/tiangolo/fastapi/issues/12176")
+            print("Usage: uv run fastapi_issue_triage <issue_number_or_url>")
+            print("Example: uv run fastapi_issue_triage https://github.com/tiangolo/fastapi/issues/12176")
             return 1
 
     print("[INFO] Initializing FastapiIssueTriageCrew...")
-    crew = FastapiIssueTriageCrew()
-    result = crew.run(task_input)
+    try:
+        crew = FastapiIssueTriageCrew()
+        result = crew.run(task_input)
+    except Exception as exc:
+        print("\n" + "=" * 72)
+        print("FASTAPI ISSUE TRIAGE FAILED")
+        print("=" * 72)
+        print(json.dumps({"status": "failed", "error": str(exc)}))
+        return 1
 
     print("\n" + "=" * 72)
     print("FASTAPI ISSUE TRIAGE COMPLETED")
     print("=" * 72)
     print(result)
+
+    try:
+        result_obj = json.loads(result)
+        if isinstance(result_obj, dict) and result_obj.get("status") == "failed":
+            return 1
+    except Exception:
+        pass
     return 0
 
 

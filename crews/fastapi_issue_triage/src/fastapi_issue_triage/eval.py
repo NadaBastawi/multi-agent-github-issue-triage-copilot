@@ -38,7 +38,10 @@ def _normalize(value: str) -> str:
 
 def _read_summary(path: Path) -> Dict:
     """Read batch summary json."""
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid JSON in summary file: {path}") from exc
 
 
 def _to_eval_rows(summary_data: Dict, include_failed: bool) -> List[Dict[str, str]]:
@@ -134,7 +137,11 @@ def _cmd_template(args: argparse.Namespace) -> int:
         print(f"Summary file not found: {summary_path}")
         return 1
 
-    summary_data = _read_summary(summary_path)
+    try:
+        summary_data = _read_summary(summary_path)
+    except ValueError as exc:
+        print(str(exc))
+        return 1
     rows = _to_eval_rows(summary_data, include_failed=args.include_failed)
     if not rows:
         print("No rows found to export from summary.")

@@ -44,6 +44,7 @@ maintainer_draft_task:
   expected_output: Two markdown sections named REPRO_CHECKLIST_MD and DRAFT_MAINTAINER_REPLY_MD
   agent: maintainer_response_specialist
   context:
+  - main_task
   - triage_analysis_task
 
 quality_gate_task:
@@ -58,4 +59,5 @@ quality_gate_task:
   expected_output: Final validated output package
   agent: quality_gate_specialist
   context:
+  - triage_analysis_task
   - maintainer_draft_task

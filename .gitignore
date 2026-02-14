@@ -223,7 +223,6 @@ temp_*.py
 .env.production
 secrets.json
 config.local.json
-.env
 # Generated files
 generated_*/
 output/

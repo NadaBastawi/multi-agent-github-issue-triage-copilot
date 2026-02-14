@@ -1,219 +1,196 @@
 # fastapi_issue_triage
 
-GitHub Issue Triage + Repro Copilot for `tiangolo/fastapi` (resolved by GitHub to `fastapi/fastapi`).
+GitHub Issue Triage + Repro Copilot for FastAPI issues.
 
-This crew generates human-review-first triage artifacts from GitHub issues:
+This crew generates:
 
 - `triage.json`
 - `repro_checklist.md`
 - `draft_maintainer_reply.md`
 
-It does not auto-comment on GitHub in this MVP.
+The workflow is human-in-the-loop (no auto-comment posting in this MVP).
 
-## 1. Prerequisites
-
-Install the following first:
+## 1) Prerequisites
 
 1. Python `>=3.10`
-2. `uv` package manager (`https://docs.astral.sh/uv/`)
-3. GitHub token (recommended) for stable API limits
+2. `uv` installed (`https://docs.astral.sh/uv/`)
+3. GitHub token (recommended for stable API limits)
 
-## 2. Full Setup (Ordered Commands)
-
-Run these commands in order.
+## 2) Setup (Ordered Commands)
 
 ### Windows PowerShell
 
 ```powershell
-# 1) Go to repository root
-cd C:\Users\ASUS\agentforge
+# 1) Go to your local clone root
+cd <path-to-agentforge>
 
 # 2) Go to this crew
 cd crews\fastapi_issue_triage
 
-# 3) Create venv and install dependencies
+# 3) Create env and install dependencies
 uv venv
 uv sync
 
-# 4) Create .env from template
+# 4) Create local env file
 Copy-Item .env.example .env
 
 # 5) Edit .env and set your real token
-# (example editor command)
 notepad .env
-
-# 6) Run one issue smoke test
-& "..\..\venv\Scripts\python.exe" -m src.fastapi_issue_triage.main 14680
 ```
 
 ### macOS/Linux
 
 ```bash
-# 1) Go to repository root
-cd ~/agentforge
+# 1) Go to your local clone root
+cd <path-to-agentforge>
 
 # 2) Go to this crew
 cd crews/fastapi_issue_triage
 
-# 3) Create venv and install dependencies
+# 3) Create env and install dependencies
 uv venv
 uv sync
 
-# 4) Create .env from template
+# 4) Create local env file
 cp .env.example .env
 
 # 5) Edit .env and set your real token
 nano .env
-
-# 6) Run one issue smoke test
-../../venv/bin/python -m src.fastapi_issue_triage.main 14680
 ```
 
-## 3. `.env` File
+## 3) Environment Variables
 
-A complete template is provided at:
+Template file:
 
 - `crews/fastapi_issue_triage/.env.example`
 
-Minimum required for production-like runs:
+Minimum:
 
 - `GITHUB_TOKEN=<your_real_token>`
 
-Useful optional settings:
+Useful optional:
 
 - `FASTAPI_TARGET_REPO=tiangolo/fastapi`
-- `FASTAPI_ENABLE_RELATED_SEARCH=0` (recommended to reduce API consumption)
-- `FASTAPI_ISSUE_REF=14680` (default issue if CLI arg omitted)
+- `FASTAPI_ENABLE_RELATED_SEARCH=0`
+- `FASTAPI_ISSUE_REF=14680`
 
-LLM enhancement is optional. Without LLM keys, deterministic triage still works.
+LLM enhancement is optional. Deterministic mode works without LLM keys.
 
-## 4. Run Modes
+## 4) Run Commands
 
-### A) Single issue run
+Run from `crews/fastapi_issue_triage`.
 
-```powershell
-cd C:\Users\ASUS\agentforge\crews\fastapi_issue_triage
-& "..\..\venv\Scripts\python.exe" -m src.fastapi_issue_triage.main 14680
-```
-
-Also supports:
-
-- Issue URL: `https://github.com/fastapi/fastapi/issues/14680`
-- `owner/repo#number`: `fastapi/fastapi#14680`
-
-### B) Batch run by explicit list
+### A) Single issue
 
 ```powershell
-& "..\..\venv\Scripts\python.exe" -m src.fastapi_issue_triage.batch --issue 14680 --issue 14918 --issue 14888
+uv run fastapi_issue_triage 14680
 ```
 
-### C) Batch run by issue file
+Also accepted:
+
+- `https://github.com/fastapi/fastapi/issues/14680`
+- `fastapi/fastapi#14680`
+
+### B) Batch from explicit issue list
+
+```powershell
+uv run fastapi_issue_triage_batch --issue 14680 --issue 14918 --issue 14888
+```
+
+### C) Batch from file
 
 Create `issues.txt` (one issue reference per line), then:
 
 ```powershell
-& "..\..\venv\Scripts\python.exe" -m src.fastapi_issue_triage.batch --issue-file issues.txt --limit 20
+uv run fastapi_issue_triage_batch --issue-file issues.txt --limit 20
 ```
 
-## 5. Output Locations
+### D) Legacy module form (equivalent)
 
-### Single issue
+```powershell
+uv run python -m fastapi_issue_triage.main 14680
+uv run python -m fastapi_issue_triage.batch --issue-file issues.txt --limit 20
+```
 
-Outputs are written to:
+## 5) Output Locations
+
+### Single issue output
 
 - `crews/fastapi_issue_triage/outputs/issue_<number>_<timestamp>/`
 
-Files inside:
+Contains:
 
 - `triage.json`
 - `repro_checklist.md`
 - `draft_maintainer_reply.md`
 - `raw_issue_context.json`
 
-### Batch run
-
-Summary written to:
+### Batch output
 
 - `crews/fastapi_issue_triage/outputs/batch_<timestamp>/batch_summary.json`
 
-## 6. Manual Accuracy Workflow (`eval.csv`)
+## 6) Manual Accuracy Workflow (`eval.csv`)
 
-### Step 1: Generate template CSV from a batch summary
+### Step 1: Generate labeling template
 
 ```powershell
-& "..\..\venv\Scripts\python.exe" -m src.fastapi_issue_triage.eval template --summary outputs\batch_20260214_031453Z\batch_summary.json
+uv run fastapi_issue_triage_eval template --summary outputs/batch_20260214_031453Z/batch_summary.json
 ```
 
 This creates:
 
-- `outputs\batch_20260214_031453Z\eval_template.csv`
+- `outputs/batch_20260214_031453Z/eval_template.csv`
 
-Columns to fill manually:
+Fill these columns:
 
 - `actual_issue_type`
 - `actual_severity`
 - `actual_component_guess`
 - `actual_action`
 
-### Step 2: Score the labeled CSV
+### Step 2: Score labels
 
 ```powershell
-& "..\..\venv\Scripts\python.exe" -m src.fastapi_issue_triage.eval score --csv outputs\batch_20260214_031453Z\eval_template.csv
-```
-
-Optional report export:
-
-```powershell
-& "..\..\venv\Scripts\python.exe" -m src.fastapi_issue_triage.eval score --csv outputs\batch_20260214_031453Z\eval_template.csv --output outputs\batch_20260214_031453Z\eval_score.json
-```
-
-## 7. Script Aliases (via `uv run`)
-
-```powershell
-uv run fastapi_issue_triage 14680
-uv run fastapi_issue_triage_batch --issue-file issues.txt --limit 20
-uv run fastapi_issue_triage_eval template --summary outputs/batch_20260214_031453Z/batch_summary.json
 uv run fastapi_issue_triage_eval score --csv outputs/batch_20260214_031453Z/eval_template.csv
 ```
 
-## 8. Triage Schema
+Optional report output:
 
-`triage.json` includes:
+```powershell
+uv run fastapi_issue_triage_eval score --csv outputs/batch_20260214_031453Z/eval_template.csv --output outputs/batch_20260214_031453Z/eval_score.json
+```
+
+## 7) Triage Schema
+
+`triage.json` fields:
 
 - `issue_type`: `bug | support | feature | docs`
 - `severity`: `low | medium | high | critical`
 - `component_guess`: `routing | dependencies | validation | docs | deployment | other`
-- `missing_info`: list of follow-up questions
+- `missing_info`: follow-up question list
 - `confidence`: float `[0.0, 1.0]`
 - `action`: `human_review | ready_to_reply`
 
 Escalation rule:
 
-- If `confidence < 0.65` or `severity == critical`, action is forced to `human_review`.
+- Force `human_review` if `confidence < 0.65` or `severity == critical`.
 
-## 9. Troubleshooting
+## 8) Troubleshooting
 
-### `401 Bad credentials`
+### 401 Bad credentials
 
-- Token is invalid, expired, or pasted incorrectly.
-- Verify:
+Verify your token:
 
 ```powershell
 $h = @{ Authorization = "Bearer $env:GITHUB_TOKEN"; Accept = "application/vnd.github+json"; "User-Agent" = "agentforge" }
 (Invoke-RestMethod https://api.github.com/user -Headers $h).login
 ```
 
-### `403 rate limit exceeded`
+### 403 Rate limit exceeded
 
-- Set a valid `GITHUB_TOKEN` in `.env`.
-- Keep `FASTAPI_ENABLE_RELATED_SEARCH=0` for lower API usage.
-
-### `ModuleNotFoundError: crewai`
-
-- Use repo venv python:
-- Windows: `..\..\venv\Scripts\python.exe`
-- macOS/Linux: `../../venv/bin/python`
+- Ensure valid `GITHUB_TOKEN` in `.env`
+- Keep `FASTAPI_ENABLE_RELATED_SEARCH=0`
 
 ### Pull request URL provided
 
-- This crew supports issues only. Use an `/issues/<number>` reference, not `/pull/<number>`.
+- This crew supports `/issues/<number>` only, not `/pull/<number>`.

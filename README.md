@@ -507,7 +507,7 @@ Quick run:
 cd crews/fastapi_issue_triage
 uv venv
 uv sync
-uv run python -m src.fastapi_issue_triage.main "https://github.com/tiangolo/fastapi/issues/12176"
+uv run fastapi_issue_triage "https://github.com/tiangolo/fastapi/issues/12176"
 ```
 
 Detailed setup and ordered commands for any developer:

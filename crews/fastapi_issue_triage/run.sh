@@ -8,7 +8,7 @@ echo "Starting fastapi_issue_triage crew..."
 if ! command -v uv &> /dev/null; then
     echo "uv is not installed. Installing uv..."
     curl -LsSf https://astral.sh/uv/install.sh | sh
-    export PATH="$HOME/.cargo/bin:$PATH"
+    export PATH="$HOME/.local/bin:$PATH"
 fi
 
 if [ ! -d ".venv" ]; then
@@ -19,5 +19,5 @@ fi
 echo "Installing dependencies with uv..."
 uv sync
 
-echo "Running crew with arguments: $@"
-uv run python -m src.fastapi_issue_triage.main "$@"
+echo "Running crew with arguments: $*"
+uv run fastapi_issue_triage "$@"

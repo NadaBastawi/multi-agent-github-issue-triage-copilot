@@ -45,9 +45,10 @@ class DebugTracer:
         error_message: Optional[str] = None,
     ) -> TraceEvent:
         """Add a trace event and enforce max history size."""
+        now = datetime.now()
         event = TraceEvent(
-            trace_id=f"TRACE_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}",
-            timestamp=datetime.now(),
+            trace_id=f"TRACE_{now.strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}",
+            timestamp=now,
             component=component,
             function_name=function_name,
             success=success,
@@ -115,11 +116,14 @@ class DebugTracer:
 
 
 _tracer_instance: Optional[DebugTracer] = None
+_tracer_lock = Lock()
 
 
 def get_tracer() -> DebugTracer:
     """Get shared tracer instance."""
     global _tracer_instance
     if _tracer_instance is None:
-        _tracer_instance = DebugTracer()
+        with _tracer_lock:
+            if _tracer_instance is None:
+                _tracer_instance = DebugTracer()
     return _tracer_instance
