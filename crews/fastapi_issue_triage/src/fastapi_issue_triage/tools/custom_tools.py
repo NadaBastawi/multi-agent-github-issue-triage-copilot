@@ -13,6 +13,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import random
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 from urllib import error, parse, request
@@ -24,6 +26,43 @@ TRIAGE_TYPES = {"bug", "support", "feature", "docs"}
 SEVERITY_LEVELS = {"low", "medium", "high", "critical"}
 COMPONENTS = {"routing", "dependencies", "validation", "docs", "deployment", "other"}
 ACTIONS = {"human_review", "ready_to_reply"}
+RETRYABLE_HTTP_CODES = {429, 500, 502, 503, 504}
+
+
+def _read_int_env(name: str, default: int) -> int:
+    """Read positive integer env value with safe fallback."""
+    raw_value = os.getenv(name, "").strip()
+    if not raw_value:
+        return default
+    try:
+        parsed = int(raw_value)
+    except ValueError:
+        return default
+    return parsed if parsed >= 0 else default
+
+
+def _read_float_env(name: str, default: float) -> float:
+    """Read positive float env value with safe fallback."""
+    raw_value = os.getenv(name, "").strip()
+    if not raw_value:
+        return default
+    try:
+        parsed = float(raw_value)
+    except ValueError:
+        return default
+    return parsed if parsed >= 0 else default
+
+
+def _retry_delay_seconds(
+    attempt_number: int,
+    base_seconds: float,
+    max_seconds: float,
+    jitter_max_seconds: float,
+) -> float:
+    """Calculate exponential backoff delay with bounded jitter."""
+    exponential = min(base_seconds * (2 ** max(attempt_number - 1, 0)), max_seconds)
+    jitter = random.uniform(0.0, max(jitter_max_seconds, 0.0))
+    return round(exponential + jitter, 3)
 
 
 def _truncate(text_value: str, max_chars: int = 1600) -> str:
@@ -107,20 +146,53 @@ def _github_headers(token: Optional[str] = None) -> Dict[str, str]:
 
 
 def _github_get_json(url: str, token: Optional[str] = None) -> Any:
-    """GET JSON from GitHub API with basic error normalization."""
+    """GET JSON from GitHub API with retry/backoff for transient failures."""
     req = request.Request(url, headers=_github_headers(token))
-    try:
-        with request.urlopen(req, timeout=25) as response:
-            payload = response.read().decode("utf-8")
-            return json.loads(payload)
-    except error.HTTPError as exc:
-        details = exc.read().decode("utf-8", errors="ignore")
-        trimmed = _truncate(details, 300)
-        raise RuntimeError(f"GitHub API HTTP {exc.code}: {trimmed}") from exc
-    except error.URLError as exc:
-        raise RuntimeError(f"Network error while calling GitHub API: {exc.reason}") from exc
-    except json.JSONDecodeError as exc:
-        raise RuntimeError("GitHub API returned non-JSON payload") from exc
+    timeout_seconds = _read_float_env("FASTAPI_GITHUB_TIMEOUT_SECONDS", 25.0)
+    max_retries = _read_int_env("FASTAPI_GITHUB_MAX_RETRIES", 3)
+    backoff_base = _read_float_env("FASTAPI_GITHUB_RETRY_BASE_SECONDS", 0.5)
+    backoff_max = _read_float_env("FASTAPI_GITHUB_RETRY_MAX_SECONDS", 8.0)
+    jitter_max = _read_float_env("FASTAPI_GITHUB_RETRY_JITTER_SECONDS", 0.25)
+    max_attempts = max_retries + 1
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            with request.urlopen(req, timeout=timeout_seconds) as response:
+                payload = response.read().decode("utf-8")
+                return json.loads(payload)
+        except error.HTTPError as exc:
+            details = exc.read().decode("utf-8", errors="ignore")
+            details_lower = details.lower()
+            is_rate_limit_403 = exc.code == 403 and "rate limit" in details_lower
+            retryable = exc.code in RETRYABLE_HTTP_CODES or is_rate_limit_403
+
+            if retryable and attempt < max_attempts:
+                delay = _retry_delay_seconds(
+                    attempt_number=attempt,
+                    base_seconds=backoff_base,
+                    max_seconds=backoff_max,
+                    jitter_max_seconds=jitter_max,
+                )
+                time.sleep(delay)
+                continue
+
+            trimmed = _truncate(details, 300)
+            raise RuntimeError(f"GitHub API HTTP {exc.code}: {trimmed}") from exc
+        except error.URLError as exc:
+            if attempt < max_attempts:
+                delay = _retry_delay_seconds(
+                    attempt_number=attempt,
+                    base_seconds=backoff_base,
+                    max_seconds=backoff_max,
+                    jitter_max_seconds=jitter_max,
+                )
+                time.sleep(delay)
+                continue
+            raise RuntimeError(f"Network error while calling GitHub API: {exc.reason}") from exc
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("GitHub API returned non-JSON payload") from exc
+
+    raise RuntimeError("GitHub API request failed after retries")
 
 
 def _extract_keywords_for_related_search(title: str) -> str:
