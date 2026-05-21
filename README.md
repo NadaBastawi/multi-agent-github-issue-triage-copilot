@@ -1,6 +1,6 @@
 # AgentForge TriageCrew — Multi-Agent GitHub Issue Triage System
 
-Nada Bastawi's TriageCrew converts GitHub issue text into structured triage output, a reproducibility checklist, and a draft maintainer reply. It is designed to cut issue review time for maintainers by splitting issue handling into four focused agents and keeping the final decision under human review.
+This TriageCrew converts GitHub issue text into structured triage output, a reproducibility checklist, and a draft maintainer reply. It is designed to cut issue review time for maintainers by splitting issue handling into four focused agents and keeping the final decision under human review.
 
 ## Architecture
 
